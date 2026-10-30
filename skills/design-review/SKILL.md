@@ -1,6 +1,6 @@
 ---
 name: design-review
-description: Critique and fix the visual design of a web page or app screen you already have, with no image model. Measure it, score it against an 11-row design rubric (hierarchy, first screen on a phone, grouping, alignment, type, colour, components, rhythm, images, dark mode, copy), pick the 3–6 changes that matter most, apply them through design tokens, and re-shoot to prove it got better. Use when a page "works but looks plain / amateur / cluttered / off", before showing a UI to anyone, when asked to "review the design", "critique this page", "fix the layout", "make it look better", "clean up the UI", "tighten the spacing", "it looks cluttered", "the hero is weak", "polish this", or after building any page.
+description: Critique and fix the visual design of a web page or app screen you already have, without an image model. Measure it, score it against an 11-row design rubric (hierarchy, first screen on a phone, grouping, alignment, type, colour, components, rhythm, images, dark mode, copy), pick the 3–6 changes that matter most, apply them through design tokens, and re-shoot to prove it got better. Use when a page "works but looks plain / amateur / cluttered / off", before showing a UI to anyone, when asked to "review the design", "critique this page", "fix the layout", "make it look better", "clean up the UI", "tighten the spacing", "it looks cluttered", "the hero is weak", "polish this", or after building any page. Optional keyed step: image-generated redesign mockups.
 ---
 
 # design-review
@@ -12,7 +12,7 @@ Two questions, two skills:
 | is it **broken**? (overflow, overlap, invisible text, misaligned) | `ui-audit`: run it first, and fix breakage before taste |
 | is it **good**, and what are the few fixes? | **this one** |
 
-## The pass (≈10 minutes, no image model, no API spend)
+## The pass (≈10 minutes; steps 1–5 need no image model and no API key)
 
 1. **Measure.** Check breakage first, then the design numbers and screenshots:
    ```bash
@@ -40,7 +40,14 @@ Two questions, two skills:
      - visibly better on phone AND desktop
      - no new FLAG lines and no new ui-audit findings
      - every rubric row you marked is now `ok` or explained
-6. **When a fix isn't enough.** If, after a pass, the page is clean but still has no identity (generic, "template-y"), or the brief is a new look, it needs a redesign rather than a review. Generate or collect reference designs first, then rebuild with the same tokens and re-run this pass on the result.
+6. **When a fix isn't enough: mockups (optional, keyed).** If, after a pass, the page is clean but still has no identity (generic, "template-y"), or the brief is a new look, generate redesign references:
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/mockup.py" ./review/v0-1-1280.png "<rubric failures + direction>" --out ./review/mock --variants 2 --viewport desktop
+   ```
+   - It uses `PUSHBUILD_API_KEY` (Pushbuild's paid mockup service) or else `OPENROUTER_API_KEY` (your own OpenRouter key; `DESIGN_REVIEW_IMAGE_MODEL` picks the model).
+   - With neither key it exits 2 and says where to get one. In that case, say so to the user and stop at step 5; don't ask for a key mid-task.
+   - ⛔ It sends the screenshot and brief to that service. Never run it on a page showing private or customer data without the user's OK.
+   - Read the mockups, pick one direction with the user, then rebuild it in code through the same tokens and re-run this pass on the result. The images are references, never assets to ship.
 
 ## The rubric — what good looks like, and the usual fix
 
@@ -63,4 +70,4 @@ Two questions, two skills:
 - ⛔ Real content only; never ship placeholder copy or invented facts to make a layout look full.
 - Check the phone layout on every pass, not at the end; most visitors arrive on a phone.
 - Don't fight a site's design system: if the page has tokens, change token values before adding new ones.
-- Screenshots of private data stay local. This skill sends nothing anywhere, but an image-generation step would.
+- Steps 1–5 send nothing anywhere. Only step 6 (mockups) sends a screenshot out, and only with a key set.

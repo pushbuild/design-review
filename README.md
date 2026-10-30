@@ -7,7 +7,13 @@ Claude Code builds pages that work but often look off: text that spills on a pho
 | `ui-audit` | **Is it broken?** It sweeps a page across 13 viewport widths (320–1920 px) and tests every element. It checks horizontal overflow, off-screen elements, clipped, overlapping, spilling or invisible text, must-see elements hidden or covered, table columns hidden in sideways scrollers, small tap targets and text on phones, and stretched images. Each finding names the element and the widths. |
 | `design-review` | **Is it good, and what are the 3–6 fixes?** It measures page length, footer length, CTA position against the fold and section padding, then takes phone, dark-mode and desktop screenshots. Claude scores an 11-row design rubric against them, applies the fixes through design tokens, and re-shoots to prove the page got better. |
 
-No image model and no API keys. Everything runs locally in the official Playwright Docker image.
+The review is **free and local**: no image model and no API key. It runs in the official Playwright Docker image and sends nothing anywhere.
+
+**Optional: redesign mockups.** When a page is clean but generic, `skills/design-review/mockup.py` sends a screenshot plus the rubric findings to an image model and returns 1–3 redesign references for Claude to rebuild in code.
+- **Pushbuild mockups:** set `PUSHBUILD_API_KEY`. Keys and credit are at [pushbuild.com/apis](https://pushbuild.com/apis/app/account?utm_source=github&utm_medium=readme&utm_campaign=design-review).
+- **Your own OpenRouter key:** set `OPENROUTER_API_KEY`, and optionally `DESIGN_REVIEW_IMAGE_MODEL` (default `google/gemini-3-pro-image`).
+
+Only this step sends data, the screenshot and the brief, to the service whose key you set.
 
 ## Install
 ```
