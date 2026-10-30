@@ -1,0 +1,17 @@
+{
+  "name": "pushbuild",
+  "owner": {
+    "name": "Pushbuild",
+    "email": "hello@pushbuild.com"
+  },
+  "metadata": {
+    "description": "Claude Code plugins from Pushbuild."
+  },
+  "plugins": [
+    {
+      "name": "design-review",
+      "source": "./",
+      "description": "Layout-bug audit across 13 viewport widths plus a design critique-and-fix rubric. Needs Docker."
+    }
+  ]
+}

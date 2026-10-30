@@ -1,0 +1,10 @@
+{
+  "name": "design-review",
+  "version": "1.0.0",
+  "description": "Find layout bugs in web pages across 13 viewport widths, then critique and fix the visual design with an 11-row rubric, screenshots and design tokens. Code-measured, no image model. Needs Docker.",
+  "author": { "name": "Pushbuild", "email": "hello@pushbuild.com", "url": "https://pushbuild.com/?utm_source=claude-plugin&utm_medium=directory&utm_campaign=design-review" },
+  "homepage": "https://github.com/pushbuild/design-review",
+  "repository": "https://github.com/pushbuild/design-review",
+  "license": "MIT",
+  "keywords": ["design", "ui", "ux", "responsive", "layout", "css", "accessibility", "frontend", "playwright", "audit"]
+}
