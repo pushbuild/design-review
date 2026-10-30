@@ -15,7 +15,7 @@ import argparse, base64, json, os, sys, urllib.error, urllib.request
 PUSHBUILD_URL = os.environ.get("PUSHBUILD_API_URL", "https://api.pushbuild.com/design-mockups/run")
 KEY_PAGE = "https://pushbuild.com/apis/app/account?utm_source=claude-plugin&utm_medium=cli&utm_campaign=design-review"
 MODEL = os.environ.get("DESIGN_REVIEW_IMAGE_MODEL", "google/gemini-3-pro-image")
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 PROMPT = """You are a senior product designer. The attached image is a screenshot of a real web page at {viewport} width.
 Redesign it as a high-fidelity UI mockup of the SAME page: keep its real content, sections and purpose, and fix what
@@ -26,7 +26,7 @@ families, neutral colours plus one accent used sparingly, one primary action per
 Brief: {brief}"""
 
 
-def post(url, body, headers, timeout=180):
+def post(url, body, headers, timeout=240):
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -51,7 +51,7 @@ def pushbuild(png, a):
         if code == 402:
             sys.exit(f"Out of Pushbuild credit. Add credit at {KEY_PAGE}")
         if attempt == 2 or code < 429:
-            sys.exit(f"Pushbuild mockup service error {code}: {j.get('error', '')}. The local review still works without mockups.")
+            sys.exit(f"Pushbuild mockup service error {code}: {j.get('detail') or j.get('error', '')}. The local review still works without mockups.")
 
 
 def openrouter(png, a):
