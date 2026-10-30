@@ -13,7 +13,9 @@ The review is **free and local**: no image model and no API key. It runs in the 
 - **Pushbuild mockups:** set `PUSHBUILD_API_KEY`. Keys and credit are at [pushbuild.com/apis](https://pushbuild.com/apis/app/account?utm_source=github&utm_medium=readme&utm_campaign=design-review).
 - **Your own OpenRouter key:** set `OPENROUTER_API_KEY`, and optionally `DESIGN_REVIEW_IMAGE_MODEL` (default `google/gemini-3-pro-image`).
 
-Only this step sends data, the screenshot and the brief, to the service whose key you set.
+**What leaves your machine.** Only this step sends data, and only when a key is set:
+- **Pushbuild key:** the screenshot and brief go to Pushbuild, which passes them to OpenRouter (`google/gemini-3-pro-image`) to generate the images. Pushbuild stores only billing metadata: the time, the key, the image count and the USD cost. It keeps no screenshots, briefs or images. See the [privacy policy](https://pushbuild.com/privacy/) and [terms](https://pushbuild.com/terms/).
+- **Your own OpenRouter key:** the screenshot and brief go straight from your machine to OpenRouter, under OpenRouter's terms. Pushbuild sees nothing.
 
 ## Install
 ```
