@@ -47,6 +47,8 @@
     for (let a = e; a; a = a.parentElement) {
       const t = a === e ? s : getComputedStyle(a);
       if (t.backgroundImage !== "none" || t.filter !== "none" || t.mixBlendMode !== "normal") return null;
+      // opacity mid-transition/animation is a frame, not the design (a rotating figure fading in)
+      if (+t.opacity < 1 && a.getAnimations && a.getAnimations().some(n => n.playState === "running")) return null;
       op *= +t.opacity;
       const b = rgba(t.backgroundColor);
       if (b[3] > 0) { layers.push(b); if (b[3] >= 0.99) break; }
@@ -95,8 +97,10 @@
       else if (clips) add("text-ellipsized", e, `"${e.textContent.trim().slice(0, 40)}" truncated with …`);
       else if (!clippedBy(e)) add("text-spills-box", e, `"${e.textContent.trim().slice(0, 40)}" ${e.scrollWidth}px in a ${e.clientWidth}px box`);
     }
+    const clamp = s.getPropertyValue("-webkit-line-clamp");   // a line clamp ends in … on purpose
     if (e.scrollHeight > e.clientHeight + 2 && e.clientHeight > 0 && clips && /hidden|clip/.test(s.overflowY))
-      add("text-clipped-vertically", e, `"${e.textContent.trim().slice(0, 40)}" needs ${e.scrollHeight}px height, box ${e.clientHeight}px`);
+      if (clamp && clamp !== "none") add("text-ellipsized", e, `"${e.textContent.trim().slice(0, 40)}" clamped to ${clamp} lines with …`);
+      else add("text-clipped-vertically", e, `"${e.textContent.trim().slice(0, 40)}" needs ${e.scrollHeight}px height, box ${e.clientHeight}px`);
     // 3 · unreadable on a phone
     if (phone && fs < 12) add("text-too-small", e, `${fs}px at ${W}px wide`);
     // 3b · text that all but vanishes into its background (katamacreek: dark-green links on a dark-green band)
