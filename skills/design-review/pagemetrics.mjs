@@ -19,9 +19,14 @@ for (const [n, u0] of urls.entries()) for (const [w, h] of VIEWS) {
   p.on("requestfailed", r => { const t = r.resourceType();
     if (!TRANSIENT.test(r.failure()?.errorText || "")) return;
     if (/stylesheet|font|script/.test(t) || (t === "image" && (!org || r.url().startsWith(org)))) failed.add(r.url()); });
+  // A 429/5xx stylesheet fires no requestfailed but leaves the page unstyled (parallel load); so does any sheet that never applied.
+  const st = new Map(); p.on("response", r => { const c = r.status(); st.set(r.url(), c);
+    if ((c === 429 || c >= 500) && /stylesheet|font|script/.test(r.request().resourceType())) failed.add(r.url()); });
   let ok = null;
   for (let i = 0; i < 3 && (!ok || failed.size); i++) { if (i) await p.waitForTimeout(3000 * i); failed.clear();
-    ok = await p.goto(u, { waitUntil: "load", timeout: 45000 }).catch(() => null); }
+    ok = await p.goto(u, { waitUntil: "load", timeout: 45000 }).catch(() => null);
+    if (ok && !failed.size) for (const h of await p.evaluate(() => [...document.querySelectorAll('link[rel~="stylesheet"]:not([disabled])')].filter(l => !l.sheet).map(l => l.href)).catch(() => []))
+      if (!(st.get(h) >= 400 && st.get(h) < 500 && st.get(h) !== 429)) failed.add(h); }
   if (!ok || failed.size) { res.push({ url: u, w, error: ok ? `load incomplete: ${failed.size} assets failed (${[...failed][0]})` : "load failed" }); await p.close(); continue; }
   await p.waitForTimeout(800);
   const m = await p.evaluate(vh => {

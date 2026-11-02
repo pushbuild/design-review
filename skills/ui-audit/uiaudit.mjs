@@ -25,10 +25,19 @@ const failed = new Set(), origin = /^https?:/.test(url) ? new URL(url).origin : 
 page.on("requestfailed", r => { const t = r.resourceType();
   if (!TRANSIENT.test(r.failure()?.errorText || "")) return;   // ERR_BLOCKED_BY_ORB etc. fail the same in a real browser
   if (/stylesheet|font|script/.test(t) || (t === "image" && (!origin || r.url().startsWith(origin)))) failed.add(`${r.url()} (${r.failure()?.errorText})`); });
+// Under parallel load a server answers CSS with 429/5xx (no requestfailed event) and the page measures unstyled:
+// objectFit "fill" everywhere, 40+ tap targets. Count those as transient too, and after load
+// require every <link rel=stylesheet> to have applied, unless the site itself 404s it.
+const status = new Map();
+page.on("response", r => { const t = r.request().resourceType(), c = r.status(); status.set(r.url(), c);
+  if ((c === 429 || c >= 500) && /stylesheet|font|script/.test(t)) failed.add(`${r.url()} (HTTP ${c})`); });
+const unstyled = () => page.evaluate(() => [...document.querySelectorAll('link[rel~="stylesheet"]:not([disabled])')]
+  .filter(l => !l.sheet).map(l => l.href));   // no sheet = never loaded (an empty file still has one)
 for (const wait of [0, 3000, 10000]) {
   if (wait) await page.waitForTimeout(wait);
   failed.clear();
   await page.goto(url, { waitUntil: "networkidle", timeout: 60000 }).catch(e => failed.add(`${url} (${e.message.split("\n")[0]})`));
+  if (!failed.size) for (const h of await unstyled().catch(() => [])) if (!(status.get(h) >= 400 && status.get(h) < 500 && status.get(h) !== 429)) failed.add(`${h} (stylesheet not applied)`);
   if (!failed.size) break;
 }
 if (failed.size) {
