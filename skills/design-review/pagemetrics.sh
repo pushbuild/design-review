@@ -9,7 +9,7 @@ mkdir -p "$cache" "$(dirname "$out")"
 out=$(cd "$(dirname "$out")" && pwd -P)/$(basename "$out")
 mounts=(-v "$(dirname "$out")":"$(dirname "$out")") urls=()
 for u in "$@"; do
-  if [ -f "$u" ]; then u=$(cd "$(dirname "$u")" && pwd -P)/$(basename "$u"); mounts+=(-v "$(dirname "$u")":"$(dirname "$u")":ro); fi
+  if [ -f "$u" ]; then u=$(cd "$(dirname "$u")" && pwd -P)/$(basename "$u"); [ "$(dirname "$u")" = "$(dirname "$out")" ] || [[ " ${mounts[*]} " == *" $(dirname "$u"):"* ]] || mounts+=(-v "$(dirname "$u")":"$(dirname "$u")":ro); fi   # docker refuses a folder mounted twice
   urls+=("$u")
 done
 # Bridge networking (host networking drops requests with net::ERR_NETWORK_CHANGED); host only for a local dev server.

@@ -10,7 +10,7 @@ Code, not eyes: it finds the bug and names the element, so you fix the CSS rule 
 ## Run it
 ```bash
 "${CLAUDE_SKILL_DIR}/uiaudit.sh" <url | ./page.html> ./audit/page \
-   [--expect "nav .cart"] [--expect "#buy"] [--widths 320,768,1440] [--dark] [--shots]
+   [--expect "nav .cart"] [--expect "#buy"] [--widths 320,768,1440] [--dark] [--shots] [--text-scale 1.3]
 ```
 - **Speed and requirements:** about 10 s for 13 widths, with headless Chromium in the official Playwright Docker image. It needs Docker only; nothing installs on the host. The first run downloads the image and Playwright, and they are cached in `~/.cache/design-review-playwright`.
 - **Dev servers:** `http://localhost:<port>` works, because the container uses the host network for local targets only.
@@ -24,6 +24,7 @@ Code, not eyes: it finds the bug and names the element, so you fix the CSS rule 
 | expected-missing / hidden / off-viewport / covered | a must-see element is gone, `display:none`, partly off-screen, or under another element (sticky header, cookie bar, modal) | fix the media query; `z-index`; scroll-margin |
 | page-overflow-x | the page scrolls sideways | the element-off-viewport finding names the cause |
 | element-off-viewport | the deepest element sticking out of the viewport, not inside a scroll/clip container | `max-width:100%`, `min-width:0` on flex/grid children, wrap long tables in `overflow-x:auto` |
+| control-spills-card | a button or link sticking >1 px out of the nearest ancestor that draws a box (border or background), e.g. a buy button over the next card; positioned controls and anything inside a scroller exempt | `max-width:100%` + `white-space:normal` on the control, `min-width:0` on its flex/grid parent |
 | text-invisible | text under 1.5:1 contrast with the background behind it, opacity included (skipped over images, gradients and SVG) | fix the colour; links inherit nothing from a band they sit on |
 | text-clipped | text cut off by `overflow:hidden` with no ellipsis | let it wrap, or add `text-overflow:ellipsis` deliberately |
 | text-overlap | two pieces of text drawn on top of each other (checked per line box; fixed and sticky elements ignored) | absolute positioning that doesn't survive narrow widths |

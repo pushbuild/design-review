@@ -15,7 +15,7 @@ import argparse, base64, json, os, sys, urllib.error, urllib.request
 PUSHBUILD_URL = os.environ.get("PUSHBUILD_API_URL", "https://api.pushbuild.com/design-mockups/run")
 KEY_PAGE = "https://pushbuild.com/apis/app/account?utm_source=claude-plugin&utm_medium=cli&utm_campaign=design-review"
 MODEL = os.environ.get("DESIGN_REVIEW_IMAGE_MODEL", "google/gemini-3-pro-image")
-VERSION = "1.1.5"
+VERSION = "1.1.6"
 
 PROMPT = """You are a senior product designer. The attached image is a screenshot of a real web page at {viewport} width.
 Redesign it as a high-fidelity UI mockup of the SAME page: keep its real content, sections and purpose, and fix what

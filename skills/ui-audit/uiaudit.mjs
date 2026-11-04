@@ -1,5 +1,5 @@
 // Sweep a page across many viewport widths, run uiaudit.js at each, group findings by element.
-//   uiaudit.mjs <url> --out <prefix> [--widths 320,375,...] [--expect "sel1" --expect "sel2"] [--dark] [--shots]
+//   uiaudit.mjs <url> --out <prefix> [--widths 320,375,...] [--expect "sel1" --expect "sel2"] [--dark] [--shots] [--text-scale 1.3]
 // Writes <prefix>-report.json; with --shots, a screenshot of each width that has findings, with the
 // offending elements outlined in red.
 import { chromium } from "playwright";
@@ -11,7 +11,7 @@ const argv = process.argv.slice(2);
 const all = k => argv.flatMap((a, i) => a === k ? [argv[i + 1]] : []);
 const opt = (k, d) => all(k)[0] ?? d;
 const url = /^https?:|^file:/.test(argv[0]) ? argv[0] : "file://" + argv[0];
-const out = opt("--out", "uiaudit"), expect = all("--expect");
+const out = opt("--out", "uiaudit"), expect = all("--expect"), scale = Number(opt("--text-scale", "1"));
 const widths = opt("--widths", "320,360,375,390,414,480,600,768,820,1024,1280,1440,1920").split(",").map(Number);
 const AUDIT = fs.readFileSync(new URL("./uiaudit.js", import.meta.url), "utf8");
 
@@ -51,6 +51,13 @@ const byKey = new Map(), perWidth = {};
 for (const w of widths) {
   await page.setViewportSize({ width: w, height: w <= 600 ? 800 : 900 });
   await page.waitForTimeout(300);                       // let resize observers and media queries settle
+  // --text-scale: a phone's text-size setting (Android Chrome; 115–130% is common) scales every font, px included, and leaves
+  // px line-heights and box widths alone. Emulated per width (media queries change the base sizes), undone after.
+  if (scale !== 1) await page.evaluate(k => {
+    const els = [...document.querySelectorAll("body, body *")], fs = els.map(e => parseFloat(getComputedStyle(e).fontSize));
+    window.__uiauditFs = els.map(e => [e, e.style.getPropertyValue("font-size"), e.style.getPropertyPriority("font-size")]);
+    els.forEach((e, i) => e.style.setProperty("font-size", fs[i] * k + "px", "important"));
+  }, scale);
   const r = await page.evaluate(AUDIT);
   // Second pass with every closed <details> opened (menus, accordions): what a user sees after tapping.
   // Overlap is skipped there: an open dropdown covers the page by design.
@@ -74,16 +81,17 @@ for (const w of widths) {
     await page.screenshot({ path: `${out}-${w}.png`, fullPage: true, clip: { x: 0, y: 0, width: w, height: Math.min(4000, await page.evaluate(() => document.documentElement.scrollHeight)) } });
     await page.evaluate(() => document.querySelectorAll("[style*='outline']").forEach(e => e.style.outline = ""));
   }
+  if (scale !== 1) await page.evaluate(() => window.__uiauditFs.forEach(([e, v, p]) => v ? e.style.setProperty("font-size", v, p) : e.style.removeProperty("font-size")));
 }
 await browser.close();
 
-const SEV = ["expected-missing", "expected-hidden", "expected-off-viewport", "expected-covered", "page-overflow-x", "element-off-viewport",
+const SEV = ["expected-missing", "expected-hidden", "expected-off-viewport", "expected-covered", "page-overflow-x", "element-off-viewport", "control-spills-card",
   "text-invisible", "text-clipped", "text-overlap", "text-spills-box", "scroll-hidden-content", "text-clipped-vertically", "image-distorted", "misaligned", "tap-target-small", "text-too-small", "text-ellipsized"];
 const groups = [...byKey.values()].sort((a, b) => SEV.indexOf(a.check) - SEV.indexOf(b.check) || b.widths.length - a.widths.length);
 const range = ws => ws.length === widths.length ? "all widths" : ws.join(",");
-fs.writeFileSync(`${out}-report.json`, JSON.stringify({ url, widths, perWidth, groups }, null, 1));
+fs.writeFileSync(`${out}-report.json`, JSON.stringify({ url, widths, textScale: scale, perWidth, groups }, null, 1));
 
-console.log(`${url}\nfindings per width: ${widths.map(w => `${w}:${perWidth[w]}`).join(" ")}`);
+console.log(`${url}${scale !== 1 ? ` (text ${Math.round(scale * 100)}%)` : ""}\nfindings per width: ${widths.map(w => `${w}:${perWidth[w]}`).join(" ")}`);
 const counts = {}; for (const g of groups) counts[g.check] = (counts[g.check] || 0) + 1;
 console.log(Object.keys(counts).length ? "by check: " + Object.entries(counts).map(([k, v]) => `${k}×${v}`).join("  ") : "no findings");
 for (const g of groups.slice(0, 40)) {

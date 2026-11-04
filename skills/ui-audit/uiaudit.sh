@@ -8,7 +8,7 @@ cache=${XDG_CACHE_HOME:-$HOME/.cache}/design-review-playwright
 mkdir -p "$cache" "$(dirname "$out")"
 out=$(cd "$(dirname "$out")" && pwd -P)/$(basename "$out")
 mounts=(-v "$(dirname "$out")":"$(dirname "$out")")
-if [ -f "$target" ]; then target=$(cd "$(dirname "$target")" && pwd -P)/$(basename "$target"); mounts+=(-v "$(dirname "$target")":"$(dirname "$target")":ro); fi
+if [ -f "$target" ]; then target=$(cd "$(dirname "$target")" && pwd -P)/$(basename "$target"); [ "$(dirname "$target")" = "$(dirname "$out")" ] || mounts+=(-v "$(dirname "$target")":"$(dirname "$target")":ro); fi   # one mount when page and output share a folder
 # Bridge networking: on host networking Chromium sees each container start as interface churn and drops requests
 # (net::ERR_NETWORK_CHANGED), so pages load without CSS. Host networking only for a dev server on this machine.
 net=bridge; case " $* $target " in *localhost*|*127.0.0.1*|*'[::1]'*) net=host;; esac

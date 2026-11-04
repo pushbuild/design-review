@@ -199,5 +199,26 @@
     if (hidden.length) add("scroll-hidden-content", e, `${new Set(hidden.map(c => c.cellIndex)).size} table column(s) start past the visible ${e.clientWidth}px; table is ${e.scrollWidth}px`);
     else if (e.scrollWidth > 1.3 * e.clientWidth) add("scroll-hidden-content", e, `${e.scrollWidth}px of content in a ${e.clientWidth}px sideways scroller`);
   }
+  // 10 · a control sticking out of its card (a "Buy" button over the next card: often 2–4px
+  // at 100% text and plain to see at a phone's 115–130% text scale). The card is the nearest ancestor that draws
+  // a box (border or background). Positioned controls (badges, corner close buttons) overhang on purpose.
+  const drawsBox = s => rgba(s.backgroundColor)[3] > 0 || s.backgroundImage !== "none"
+    || ["Top", "Right", "Bottom", "Left"].some(k => parseFloat(s[`border${k}Width`]) > 0 && s[`border${k}Style`] !== "none" && rgba(s[`border${k}Color`])[3] > 0);
+  for (const e of document.querySelectorAll("a[href], button, [role=button], input[type=submit], input[type=button]")) {
+    const s = getComputedStyle(e);
+    if (s.display === "inline" || /absolute|fixed|sticky/.test(s.position) || !visible(e, s)) continue;   // inline links wrap with their prose
+    let card = null;
+    for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) {
+      const t = getComputedStyle(a);
+      if (t.overflowX !== "visible" || t.overflowY !== "visible") break;   // a scroller (table wrap, carousel, nav row) holds it on purpose
+      if (drawsBox(t)) { card = a; break; }
+      if (/absolute|fixed/.test(t.position)) break;      // positioned out of whatever box sits above it
+    }
+    if (!card) continue;
+    const r = e.getBoundingClientRect(), c = card.getBoundingClientRect();
+    const sides = { left: c.left - r.left, right: r.right - c.right, top: c.top - r.top, bottom: r.bottom - c.bottom };
+    const [side, px] = Object.entries(sides).sort((a, b) => b[1] - a[1])[0];
+    if (px > 1) add("control-spills-card", e, `${Math.round(px)}px past the ${side} edge of ${sel(card)}`);
+  }
   return { width: W, height: H, findings: out };
 })()
