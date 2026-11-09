@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "design-review",
-      "source": "./",
+      "source": "./plugin",
       "description": "Layout-bug audit across 13 viewport widths plus a design critique-and-fix rubric. Needs Docker."
     }
   ]

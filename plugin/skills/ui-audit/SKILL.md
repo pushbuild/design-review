@@ -8,12 +8,15 @@ description: Find layout bugs in a web page or web app by sweeping it across 13 
 Code, not eyes: it finds the bug and names the element, so you fix the CSS rule instead of squinting at screenshots.
 
 ## Run it
+Everything runs in one pinned Docker image, `ghcr.io/pushbuild/design-review:1.1.8` (headless Chromium + Playwright). Run from the folder that holds the page and where the output should go; that folder is mounted at the same path inside the container:
 ```bash
-"${CLAUDE_SKILL_DIR}/uiaudit.sh" <url | ./page.html> ./audit/page \
-   [--expect "nav .cart"] [--expect "#buy"] [--widths 320,768,1440] [--dark] [--shots] [--text-scale 1.3]
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":"$PWD" -w "$PWD" \
+  ghcr.io/pushbuild/design-review:1.1.8 ui-audit <url | ./page.html> ./audit/page \
+  [--expect "nav .cart"] [--expect "#buy"] [--widths 320,768,1440] [--dark] [--shots] [--text-scale 1.3]
 ```
-- **Speed and requirements:** about 10 s for 13 widths, with headless Chromium in the official Playwright Docker image. It needs Docker only; nothing installs on the host. The first run downloads the image and Playwright, and they are cached in `~/.cache/design-review-playwright`.
-- **Dev servers:** `http://localhost:<port>` works, because the container uses the host network for local targets only.
+- **Speed and requirements:** about 10–30 s for 13 widths. It needs Docker only; nothing installs on the host. The first run pulls the image once.
+- **Paths:** the page and the output prefix must be inside the current folder (relative paths are fine). For a page in another folder, add `-v /that/folder:/that/folder:ro` and pass its absolute path.
+- **Dev servers:** for `http://localhost:<port>` (or `127.0.0.1`), add `--network host` so the container can reach it. Use the default network for everything else: on the host network Chromium drops requests (`net::ERR_NETWORK_CHANGED`) and pages load without CSS.
 - **Output:** one line per problem element, with the widths where it happens, plus `<prefix>-report.json`.
 - **`--shots`:** saves a screenshot of each failing width with the culprits outlined in red. Read them one at a time, and only for findings you don't understand from the text.
 - **`--expect`** (repeatable) names elements that MUST be visible at every width, such as the cart, the buy button, the nav toggle or the price. Always pass the 2–5 that matter on your page.
@@ -47,14 +50,15 @@ Not flagged on purpose:
 ⚠️ Menus toggled by JavaScript (not `<details>`) are not opened. Pass `--expect` for their items, and audit with them open.
 
 ## Pages behind a login
-The container can't see pages behind a login. `uiaudit.js` is a dependency-free function, so you can run the same checks in a real browser instead:
-1. Set the viewport width.
-2. Evaluate the file's contents in the page, through DevTools or your browser-automation tool's evaluate call.
-3. Read the returned `{width, findings}`.
-4. Repeat per width.
+The container can't see pages behind a login. The audit itself is a dependency-free function, so you can run the same checks in a real browser instead:
+1. Save it: `docker run --rm ghcr.io/pushbuild/design-review:1.1.8 source uiaudit.js > uiaudit.js`
+2. Set the viewport width.
+3. Evaluate the file's contents in the page, through DevTools or your browser-automation tool's evaluate call.
+4. Read the returned `{width, findings}`.
+5. Repeat per width.
 
 ## Rules
 - Fix the highest row first; one overflow often causes several findings below it.
 - `LOAD INCOMPLETE` (exit 3) means a stylesheet, font, script or same-origin image failed at the network level on all 3 tries. No findings are reported, because a page without its CSS audits as a wreck. Re-run; if it persists, the asset is down.
 - Done means no findings above `tap-target-small` at any width, and every `--expect` passes.
-- `fixture.html` plants one bug per check. After changing `uiaudit.js`, run the audit against the fixture and confirm every check still fires.
+- The image ships `fixture.html`, a page that plants one bug per check. To confirm the audit works on this machine: `docker run --rm ghcr.io/pushbuild/design-review:1.1.8 source fixture.html > fixture.html`, audit it, and check that every check fires.

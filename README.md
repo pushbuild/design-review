@@ -7,9 +7,9 @@ Claude Code builds pages that work but often look off: text that spills on a pho
 | `ui-audit` | **Is it broken?** It sweeps a page across 13 viewport widths (320–1920 px) and tests every element. It checks horizontal overflow, off-screen elements, clipped, overlapping, spilling or invisible text, must-see elements hidden or covered, table columns hidden in sideways scrollers, small tap targets and text on phones, and stretched images. Each finding names the element and the widths. |
 | `design-review` | **Is it good, and what are the 3–6 fixes?** It measures page length, footer length, CTA position against the fold and section padding, then takes phone, dark-mode and desktop screenshots. Claude scores an 11-row design rubric against them, applies the fixes through design tokens, and re-shoots to prove the page got better. |
 
-The review is **free and local**: no image model and no API key. It runs in the official Playwright Docker image and sends nothing anywhere.
+The review is **free and local**: no image model and no API key. It runs in one public Docker image, `ghcr.io/pushbuild/design-review` (built from the official Playwright image), and sends nothing anywhere.
 
-**Optional: redesign mockups.** When a page is clean but generic, `skills/design-review/mockup.py` sends a screenshot plus the rubric findings to an image model and returns 1–3 redesign references for Claude to rebuild in code.
+**Optional: redesign mockups.** When a page is clean but generic, the image's `mockup` command sends a screenshot plus the rubric findings to an image model and returns 1–3 redesign references for Claude to rebuild in code.
 - **Pushbuild mockups:** set `PUSHBUILD_API_KEY`. Keys and credit are at [pushbuild.com/apis](https://pushbuild.com/apis/app/account?utm_source=github&utm_medium=readme&utm_campaign=design-review).
 - **Your own OpenRouter key:** set `OPENROUTER_API_KEY`, and optionally `DESIGN_REVIEW_IMAGE_MODEL` (default `google/gemini-3-pro-image`).
 
@@ -22,17 +22,28 @@ The review is **free and local**: no image model and no API key. It runs in the 
 /plugin marketplace add pushbuild/design-review
 /plugin install design-review@pushbuild
 ```
-**Requires Docker.** The first run pulls `mcr.microsoft.com/playwright:v1.62.0-noble` and caches Playwright in `~/.cache/design-review-playwright`.
+**Requires Docker.** The first run pulls `ghcr.io/pushbuild/design-review:1.1.8` (public, no login). The plugin itself is only Markdown and JSON; the skills tell Claude which `docker run` command to use.
 
 ## Use
-Ask Claude to "review the design of http://localhost:3000", "check this page on mobile" or "why does this look amateur". You can also run the scripts directly:
+Ask Claude to "review the design of http://localhost:3000", "check this page on mobile" or "why does this look amateur". You can also run the image directly, from the folder that holds the page and the output:
 ```bash
-skills/ui-audit/uiaudit.sh https://example.com ./out/audit --expect "nav" --shots
-skills/design-review/pagemetrics.sh ./out/metrics.json https://example.com
+I=ghcr.io/pushbuild/design-review:1.1.8
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":"$PWD" -w "$PWD" $I ui-audit https://example.com ./out/audit --expect "nav" --shots
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":"$PWD" -w "$PWD" $I pagemetrics ./out/metrics.json https://example.com
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":"$PWD" -w "$PWD" -e PUSHBUILD_API_KEY -e OPENROUTER_API_KEY \
+  $I mockup ./out/metrics-1-1280.png "hero is weak, CTA below the fold" --out ./out/mock --variants 2
 ```
-- **Local files:** pass a local HTML path to audit a file instead of a URL.
-- **Dev servers:** a `localhost` URL runs the container on the host network, so it can reach your dev server.
-- **Pages behind a login:** run `skills/ui-audit/uiaudit.js` in a real browser instead. It is a dependency-free function that returns the findings for the current viewport.
+- **Local files:** pass a local HTML path inside the mounted folder to audit a file instead of a URL.
+- **Dev servers:** for a `localhost` URL add `--network host`, so the container can reach your dev server.
+- **Pages behind a login:** `docker run --rm $I source uiaudit.js > uiaudit.js` saves the audit as a dependency-free function; evaluate it in a real browser at each width to get the findings.
+
+## Repository layout
+| path | what |
+|---|---|
+| `plugin/` | the Claude Code plugin: `.claude-plugin/plugin.json`, the icon and two `SKILL.md` files |
+| `image/` | the code (`uiaudit.mjs`, `uiaudit.js`, `pagemetrics.mjs`, `mockup.py`, `fixture.html`) and the `Dockerfile` |
+| `.claude-plugin/marketplace.json` | the marketplace entry, pointing at `./plugin` |
+| `.github/workflows/image.yml` | builds and pushes the image to GHCR on every `v*` tag and push to `main` |
 
 ## Need more than a review?
 Built by [Pushbuild](https://pushbuild.com/?utm_source=claude-plugin&utm_medium=directory&utm_campaign=design-review), which makes software, automations and AI tools for small businesses. For a free check of your live site, try the [Pushbuild website check](https://pushbuild.com/tools/website-check/?utm_source=claude-plugin&utm_medium=directory&utm_campaign=design-review).

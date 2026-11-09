@@ -16,10 +16,14 @@ Two questions, two skills:
 
 1. **Measure.** Check breakage first, then the design numbers and screenshots:
    ```bash
-   "${CLAUDE_SKILL_DIR}/../ui-audit/uiaudit.sh" <url|./page.html> ./review/ua --widths 375,1440
-   "${CLAUDE_SKILL_DIR}/pagemetrics.sh" ./review/v0.json <url|./page.html> [more urls]
+   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":"$PWD" -w "$PWD" \
+     ghcr.io/pushbuild/design-review:1.1.8 ui-audit <url|./page.html> ./review/ua --widths 375,1440
+   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":"$PWD" -w "$PWD" \
+     ghcr.io/pushbuild/design-review:1.1.8 pagemetrics ./review/v0.json <url|./page.html> [more urls]
    ```
-   `pagemetrics.sh` uses no LLM and takes about 20 s a page. It needs Docker only.
+   - Both run in one pinned Docker image (headless Chromium + Playwright); nothing installs on the host. Run from the folder that holds the page and the review output: it is mounted at the same path in the container, so local pages and outputs must be inside it. For a page elsewhere, add `-v /that/folder:/that/folder:ro` and pass its absolute path.
+   - For a dev server on `localhost` or `127.0.0.1`, add `--network host` after `docker run --rm`; keep the default network for everything else (on the host network Chromium drops requests and pages load without CSS).
+   - `pagemetrics` uses no LLM and takes about 20 s a page.
    - It prints FLAG lines for rubric rows 2, 3 and 8:
      - phone page over 15 screens
      - phone footer over 2 screens
@@ -34,7 +38,7 @@ Two questions, two skills:
    - Use one `:root` token set, ≤ 8 type sizes, a 4/8 px spacing grid and one accent colour.
    - On an existing page, append one commented `/* design-review <date> */` block instead of editing all over the file, so the change reviews and reverts cleanly.
 5. **Prove it.**
-   - Run `pagemetrics.sh ./review/v1.json <same>` and Read the new screenshots next to the v0 ones.
+   - Run the same `pagemetrics` command with `./review/v1.json` and Read the new screenshots next to the v0 ones.
    - Re-run ui-audit.
    - Done means:
      - visibly better on phone AND desktop
@@ -42,9 +46,12 @@ Two questions, two skills:
      - every rubric row you marked is now `ok` or explained
 6. **When a fix isn't enough: mockups (optional, keyed).** If, after a pass, the page is clean but still has no identity (generic, "template-y"), or the brief is a new look, generate redesign references:
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/mockup.py" ./review/v0-1-1280.png "<rubric failures + direction>" --out ./review/mock --variants 2 --viewport desktop
+   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":"$PWD" -w "$PWD" \
+     -e PUSHBUILD_API_KEY -e OPENROUTER_API_KEY -e DESIGN_REVIEW_IMAGE_MODEL \
+     ghcr.io/pushbuild/design-review:1.1.8 mockup ./review/v0-1-1280.png "<rubric failures + direction>" --out ./review/mock --variants 2 --viewport desktop
    ```
-   - It uses `PUSHBUILD_API_KEY` (Pushbuild's paid mockup service) or else `OPENROUTER_API_KEY` (your own OpenRouter key; `DESIGN_REVIEW_IMAGE_MODEL` picks the model).
+   - The `-e` flags pass the keys from the user's shell into the container by name; never write a key's value into the command.
+   - It uses `PUSHBUILD_API_KEY` (Pushbuild's paid mockup service) or else `OPENROUTER_API_KEY` (your own OpenRouter key; `DESIGN_REVIEW_IMAGE_MODEL` picks the model). Each key is sent only to its own service: the Pushbuild key to Pushbuild, the OpenRouter key to OpenRouter.
    - With neither key it exits 2 and says where to get one. In that case, say so to the user and stop at step 5; don't ask for a key mid-task.
    - ⛔ It sends the screenshot and brief to that service. Never run it on a page showing private or customer data without the user's OK.
    - Read the mockups, pick one direction with the user, then rebuild it in code through the same tokens and re-run this pass on the result. The images are references, never assets to ship.
