@@ -1,4 +1,7 @@
 name: image
+# One-time, by an org owner in the UI (GitHub has no API for it): make the package public at
+# https://github.com/orgs/pushbuild/packages/container/design-review/settings -> Danger Zone -> Change visibility -> Public.
+# GHCR sometimes answers a push with 403 (read_package/write_package or a blob HEAD); re-running the job has cleared it.
 on:
   push:
     branches: [main]
